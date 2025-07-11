@@ -80,6 +80,6 @@ steps:
 # 타임아웃 설정
 timeout: 1200s
 
-# 로깅 옵션 설정 권한부여
+# 로깅 옵션 설정 권한부여 api활성화
 options:
   logging: 'CLOUD_LOGGING_ONLY'
