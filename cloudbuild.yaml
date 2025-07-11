@@ -1,4 +1,3 @@
-# Cloud Build 실행 단계 정의
 steps:
   # -----------------------------------------------------------------
   # 1. Worker 함수 배포
@@ -11,7 +10,7 @@ steps:
       - 'github-pr-collector-worker'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=asia-northeast1' # <-- 수정
+      - '--region=us-central1' # <-- 수정
       - '--source=./function_2_worker'
       - '--entry-point=run'
       - '--trigger-http'
@@ -30,7 +29,7 @@ steps:
       - 'github-data-transformer'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=asia-northeast1' # <-- 수정
+      - '--region=us-central1' # <-- 수정
       - '--source=./function_3_transformer'
       - '--entry-point=run'
       - '--trigger-resource=bcsd-github-analytics-data'
@@ -49,7 +48,7 @@ steps:
       - 'github-webhook-handler'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=asia-northeast1' # <-- 수정
+      - '--region=us-central1' # <-- 수정
       - '--source=./function_4_webhook_handler'
       - '--entry-point=run'
       - '--trigger-http'
@@ -67,15 +66,15 @@ steps:
       - '-c'
       - |
         # Worker 함수의 URL을 가져옵니다.
-        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast1 --gen2 --format='value(serviceConfig.uri)') && \
+        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=us-central1 --gen2 --format='value(serviceConfig.uri)') && \
         
         # 가져온 URL을 환경 변수로 사용하여 Dispatcher를 배포합니다.
         gcloud functions deploy github-repo-dispatcher \
-          --gen2 --runtime=python311 --region=asia-northeast1 \
+          --gen2 --runtime=python311 --region=us-central1 \
           --source=./function_1_dispatcher --entry-point=run \
           --trigger-topic=github-collection-scheduler \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast1,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
+          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=us-central1,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
     waitFor: ['Deploy-Worker']
 
 # 타임아웃 설정
