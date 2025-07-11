@@ -26,8 +26,11 @@ echo Committing with message: "%commit_message%"
 git commit -m "%commit_message%"
 
 echo.
-echo Pushing to origin main...
-git push origin main
+:: 현재 브랜치 이름을 자동으로 가져옵니다.
+for /f "delims=" %%i in ('git branch --show-current') do set current_branch=%%i
+
+echo Pushing to origin %current_branch%...
+git push origin %current_branch%
 
 echo.
 echo =================================
