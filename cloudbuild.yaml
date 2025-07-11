@@ -2,7 +2,6 @@
 steps:
   # -----------------------------------------------------------------
   # 1. Worker 함수 배포
-  # Dispatcher가 호출할 URL을 알아내야 하므로 가장 먼저 배포합니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Worker'
@@ -11,8 +10,8 @@ steps:
       - 'deploy'
       - 'github-pr-collector-worker'
       - '--gen2'
-      - '--runtime=python311' # 런타임은 사용하는 버전에 맞게 수정
-      - '--region=asia-northeast3'
+      - '--runtime=python311'
+      - '--region=asia-northeast1' # <-- 수정
       - '--source=./function_2_worker'
       - '--entry-point=run'
       - '--trigger-http'
@@ -22,7 +21,6 @@ steps:
 
   # -----------------------------------------------------------------
   # 2. Transformer 함수 배포
-  # 다른 함수와 의존성이 없으므로 병렬 실행이 가능합니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Transformer'
@@ -32,7 +30,7 @@ steps:
       - 'github-data-transformer'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=asia-northeast3'
+      - '--region=asia-northeast1' # <-- 수정
       - '--source=./function_3_transformer'
       - '--entry-point=run'
       - '--trigger-resource=bcsd-github-analytics-data'
@@ -42,27 +40,25 @@ steps:
 
   # -----------------------------------------------------------------
   # 3. Webhook Handler 함수 배포
-  # 다른 함수와 의존성이 없으므로 병렬 실행이 가능합니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Webhook-Handler'
     args:
       - 'functions'
       - 'deploy'
-      - 'github-webhook-handler' # 함수 이름은 원하는 대로 지정
+      - 'github-webhook-handler'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=asia-northeast3'
+      - '--region=asia-northeast1' # <-- 수정
       - '--source=./function_4_webhook_handler'
       - '--entry-point=run'
       - '--trigger-http'
-      - '--allow-unauthenticated' # GitHub 웹훅은 인증 없이 호출하므로 허용
+      - '--allow-unauthenticated'
       - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta'
 
   # -----------------------------------------------------------------
   # 4. Dispatcher 함수 배포 (Worker 배포 후 실행)
-  # 방금 배포한 Worker의 URL을 동적으로 조회하여 환경 변수로 주입합니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Dispatcher'
@@ -71,20 +67,20 @@ steps:
       - '-c'
       - |
         # Worker 함수의 URL을 가져옵니다.
-        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
+        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast1 --gen2 --format='value(serviceConfig.uri)') && \
         
         # 가져온 URL을 환경 변수로 사용하여 Dispatcher를 배포합니다.
         gcloud functions deploy github-repo-dispatcher \
-          --gen2 --runtime=python311 --region=asia-northeast3 \
+          --gen2 --runtime=python311 --region=asia-northeast1 \
           --source=./function_1_dispatcher --entry-point=run \
           --trigger-topic=github-collection-scheduler \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
-    # 'Deploy-Worker' 단계가 성공해야만 이 단계가 실행됩니다.
+          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast1,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
     waitFor: ['Deploy-Worker']
 
-# 타임아웃 설정 (기본 10분, 더 길게 필요시 수정)
+# 타임아웃 설정
 timeout: 1200s
+
 # 로깅 옵션 설정
 options:
   logging: 'CLOUD_LOGGING_ONLY'
