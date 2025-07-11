@@ -30,11 +30,11 @@ def _validate_token(request):
 def run(request):
     """HTTP 요청을 받아 processor에게 작업을 위임하는 지휘자 역할"""
 
-    try:
-        _validate_token(request)
-    except Exception as e:
-        logging.error(f"Token validation failed: {e}")
-        return ("Unauthorized", 403)
+    # try:
+    #     _validate_token(request)
+    # except Exception as e:
+    #     logging.error(f"Token validation failed: {e}")
+    #     return ("Unauthorized", 403)
 
     try:
         raw_data = request.get_data(as_text=True)

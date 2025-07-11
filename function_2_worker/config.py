@@ -11,7 +11,7 @@ SECRET_ID = os.getenv("SECRET_ID")
 BIGQUERY_DATASET_ID = os.getenv("BIGQUERY_DATASET_ID")
 LABEL_MAPPING_TABLE_NAME = os.getenv("LABEL_MAPPING_TABLE_NAME")
 # Dispatcher가 호출할 이 Worker 함수의 URL (Cloud Functions 배포 후 확인하여 .env에 추가)
-WORKER_FUNCTION_URL = os.getenv("WORKER_FUNCTION_URL")
+#WORKER_FUNCTION_URL = os.getenv("WORKER_FUNCTION_URL")
 COMMON_TEAM_ID = int(os.getenv("COMMON_TEAM_ID", 4))
 
 REQUIRED_VARS = [
