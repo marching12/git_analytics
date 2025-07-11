@@ -85,3 +85,6 @@ steps:
 
 # 타임아웃 설정 (기본 10분, 더 길게 필요시 수정)
 timeout: 1200s
+# 로깅 옵션 설정
+options:
+  logging: 'CLOUD_LOGGING_ONLY'
