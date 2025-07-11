@@ -1,0 +1,11 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+BIGQUERY_DATASET_ID = os.getenv("BIGQUERY_DATASET_ID")
+
+REQUIRED_VARS = [GCP_PROJECT_ID, BIGQUERY_DATASET_ID]
+if not all(REQUIRED_VARS):
+    raise ValueError("필수 환경 변수 GCP_PROJECT_ID 또는 BIGQUERY_DATASET_ID가 없습니다.")
