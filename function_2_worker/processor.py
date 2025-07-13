@@ -1,3 +1,4 @@
+# function_2_worker/processor.py (최종 완성본)
 import json
 import logging
 from datetime import datetime
@@ -19,7 +20,6 @@ _label_team_map_cache = None
 
 # --- 헬퍼 함수들 ---
 def _get_github_token():
-    """GitHub API 토큰을 캐싱하며 가져옵니다."""
     global _github_token_cache
     if _github_token_cache is None:
         name = f"projects/{config.GCP_PROJECT_ID}/secrets/{config.SECRET_ID}/versions/latest"
@@ -29,7 +29,6 @@ def _get_github_token():
 
 
 def _get_label_team_map():
-    """BigQuery에서 레이블-팀 매핑 정보를 가져와 캐싱합니다."""
     global _label_team_map_cache
     if _label_team_map_cache is not None:
         return _label_team_map_cache
@@ -49,7 +48,6 @@ def _get_label_team_map():
 
 
 def get_team_id_from_labels(labels, label_map):
-    """레이블 목록을 기반으로 팀 ID를 결정합니다."""
     for label in labels:
         if label.get('name') in label_map:
             return label_map[label['name']]
@@ -57,22 +55,19 @@ def get_team_id_from_labels(labels, label_map):
 
 
 def _upload_to_gcs(blob_name, data_list):
-    """Pydantic 모델 리스트를 JSONL 형식으로 GCS 버킷에 업로드합니다."""
     if not data_list:
         return
     bucket = storage_client.bucket(config.GCS_BUCKET_NAME)
     blob = bucket.blob(blob_name)
-    # 각 Pydantic 모델을 JSON 문자열로 변환하고, 줄바꿈으로 연결 (JSONL)
     jsonl_data = "\n".join([model.model_dump_json() for model in data_list])
     blob.upload_from_string(jsonl_data, content_type='application/jsonl+json')
     logging.info(f"Uploaded {len(data_list)} records to {blob_name}.")
 
 
-# --- 핵심 처리 로직 ---
-def process_repo_data(repo_name, collect_types):
-    """Worker의 핵심 로직: 데이터를 스트리밍 방식으로 처리하여 메모리를 최적화합니다."""
+# --- ✨ 수정된 핵심 처리 로직 ---
+def process_repo_data(repo_name, collect_types, timestamp):
+    """Worker의 핵심 로직: timestamp를 인자로 받습니다."""
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     logging.info(f"Processor started for {repo_name} at {timestamp}")
 
     try:
@@ -103,7 +98,7 @@ def process_repo_data(repo_name, collect_types):
                         additions=pr_detail_json['additions'], deletions=pr_detail_json['deletions'],
                         commit_count=pr_detail_json['commits'],
                     )
-                    _upload_to_gcs(f"pull_requests/{repo_name}_pr_{pr_model.pr_id}.jsonl", [pr_model])
+                    _upload_to_gcs(f"pull_requests/{repo_name}_pr_{pr_model.pr_id}_{timestamp}.jsonl", [pr_model])
 
                     if 'reviews' in collect_types:
                         reviews_json = client.get_reviews_for_pr(pr_summary['url'])
@@ -114,7 +109,8 @@ def process_repo_data(repo_name, collect_types):
                                 state=review['state'], submitted_at=review['submitted_at'],
                             ) for review in reviews_json
                         ]
-                        _upload_to_gcs(f"reviews/{repo_name}_pr_{pr_model.pr_id}_reviews.jsonl", collected_reviews)
+                        _upload_to_gcs(f"reviews/{repo_name}_pr_{pr_model.pr_id}_reviews_{timestamp}.jsonl",
+                                       collected_reviews)
 
                 except Exception as e:
                     logging.error(f"Error processing PR #{pr_summary.get('number', 'N/A')}: {e}")
@@ -138,7 +134,7 @@ def process_repo_data(repo_name, collect_types):
                         created_at=issue_json['created_at'], updated_at=issue_json['updated_at'],
                         closed_at=issue_json['closed_at'],
                     )
-                    _upload_to_gcs(f"issues/{repo_name}_issue_{issue_model.issue_id}.jsonl", [issue_model])
+                    _upload_to_gcs(f"issues/{repo_name}_issue_{issue_model.issue_id}_{timestamp}.jsonl", [issue_model])
                 except Exception as e:
                     logging.error(f"Error processing Issue #{issue_json.get('number', 'N/A')}: {e}")
 
