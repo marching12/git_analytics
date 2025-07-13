@@ -1,7 +1,5 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
 
 # --- 환경 변수 로드 및 검증 ---
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")

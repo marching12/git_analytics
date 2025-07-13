@@ -1,61 +1,54 @@
-import os
 import json
 import logging
+import traceback  # 오류 추적을 위한 라이브러리 임포트
 
-import processor
-import config  # config 모듈을 임포트하여 환경 변수 사용
-from google.auth.transport import requests
-from google.oauth2 import id_token
-
+# --- 로깅 설정 ---
+# 다른 모듈보다 먼저 로깅 설정을 구성합니다.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def _validate_token(request):
-    """요청 헤더의 OIDC 토큰을 검증하여 허가된 호출인지 확인합니다."""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise PermissionError("Authorization header is missing or invalid.")
-
-    token = auth_header.split("Bearer ")[1]
-
-    # 로컬 테스트 환경에서는 토큰 검증을 건너뜁니다.
-    if os.getenv("FUNCTIONS_EMULATOR", "false").lower() == "true":
-        logging.warning("Running in emulator, skipping token validation.")
-        return
-
-    id_token.verify_oauth2_token(token, requests.Request(), audience=config.WORKER_FUNCTION_URL)
-    logging.info("Token validation successful.")
-
-
 def run(request):
-    """HTTP 요청을 받아 processor에게 작업을 위임하는 지휘자 역할"""
-
-    # try:
-    #     _validate_token(request)
-    # except Exception as e:
-    #     logging.error(f"Token validation failed: {e}")
-    #     return ("Unauthorized", 403)
-
+    """
+    HTTP 요청을 받아 processor에게 작업을 위임하는 진입점.
+    시작 오류를 잡기 위해 모든 로직을 try-except로 감쌉니다.
+    """
     try:
+        # --- 함수가 호출될 때마다 필요한 모듈을 임포트 ---
+        # 이렇게 하면 임포트 과정에서 발생하는 오류도 잡을 수 있습니다.
+        import processor
+
+        # 1. 요청 파싱
         raw_data = request.get_data(as_text=True)
         if not raw_data:
-            return ("Request body is empty.", 400)
+            logging.error("Request body is empty.")
+            return ("Invalid request: Body is empty.", 400)
 
         request_json = json.loads(raw_data)
 
         if 'repo_name' not in request_json:
-            return ("'repo_name' is required.", 400)
-    except json.JSONDecodeError:
-        return ("Malformed JSON.", 400)
+            logging.error("Invalid JSON: 'repo_name' key is missing.")
+            return ("Invalid request: 'repo_name' is required.", 400)
 
-    repo_name = request_json['repo_name']
-    collect_types = request_json.get('collect_types', ['pulls', 'issues', 'reviews'])
+        # 2. Processor에게 작업 위임
+        repo_name = request_json['repo_name']
+        collect_types = request_json.get('collect_types', ['pulls', 'issues', 'reviews'])
 
-    logging.info(f"Main handler received a valid job for {repo_name}")
+        logging.info(f"Main handler received a valid job for {repo_name}")
 
-    success = processor.process_repo_data(repo_name, collect_types)
+        success = processor.process_repo_data(repo_name, collect_types)
 
-    if success:
-        return ("Processing initiated successfully.", 202)
-    else:
-        return ("Failed to initiate processing due to internal error.", 500)
+        if success:
+            return ("Processing initiated successfully.", 202)
+        else:
+            # Processor 내부에서 이미 에러 로깅을 했을 것이므로, 여기서는 실패 응답만 반환
+            return ("Failed to process data. Check logs for details.", 500)
+
+    except Exception as e:
+        # --- 모든 종류의 오류를 여기서 포착하여 로깅 ---
+        # 컨테이너 시작 실패의 진짜 원인이 여기에 기록됩니다.
+        error_traceback = traceback.format_exc()
+        logging.error(f"An uncaught exception occurred: {e}")
+        logging.error(f"Full Traceback:\n{error_traceback}")
+
+        # 오류 내용을 응답으로 반환하여 배포 로그에서도 쉽게 확인 가능
+        return (f"Internal Server Error: {e}\n{error_traceback}", 500)
