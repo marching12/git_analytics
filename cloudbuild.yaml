@@ -1,16 +1,17 @@
 steps:
   # -----------------------------------------------------------------
-  # 1. Worker 함수 배포
+  # 1. Worker 함수 1차 배포 (URL 생성 목적)
+  # URL 환경 변수 없이 배포하여 먼저 URL을 확보합니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Worker'
+    id: 'Deploy-Worker-Initial'
     args:
       - 'functions'
       - 'deploy'
       - 'github-pr-collector-worker'
       - '--gen2'
       - '--runtime=python311'
-      - '--region=us-central1' # <-- 수정
+      - '--region=us-central1'
       - '--source=./function_2_worker'
       - '--entry-point=run'
       - '--trigger-http'
@@ -19,45 +20,39 @@ steps:
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4'
 
   # -----------------------------------------------------------------
-  # 2. Transformer 함수 배포
+  # 2. Worker 함수 2차 배포 (최종)
+  # 1차 배포로 생성된 URL을 환경 변수로 주입하여 다시 배포합니다.
+  # -----------------------------------------------------------------
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Deploy-Worker-Final'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=us-central1 --gen2 --format='value(serviceConfig.uri)') && \
+        gcloud functions deploy github-pr-collector-worker \
+          --gen2 --runtime=python311 --region=us-central1 \
+          --source=./function_2_worker --entry-point=run \
+          --trigger-http --no-allow-unauthenticated \
+          --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
+          --set-env-vars="WORKER_FUNCTION_URL=$$WORKER_URL,GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4"
+    waitFor: ['Deploy-Worker-Initial']
+
+  # -----------------------------------------------------------------
+  # 3. 다른 함수들 배포 (Worker 최종 배포 후 병렬 실행)
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Transformer'
-    args:
-      - 'functions'
-      - 'deploy'
-      - 'github-data-transformer'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=us-central1' # <-- 수정
-      - '--source=./function_3_transformer'
-      - '--entry-point=run'
-      - '--trigger-resource=bcsd-github-analytics-data'
-      - '--trigger-event=google.storage.object.finalize'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics'
+    args: [ 'functions', 'deploy', 'github-data-transformer', '--gen2', '--runtime=python311', '--region=us-central1', '--source=./function_3_transformer', '--entry-point=run', '--trigger-resource=bcsd-github-analytics-data', '--trigger-event=google.storage.object.finalize', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics' ]
+    waitFor: ['Deploy-Worker-Final']
 
-  # -----------------------------------------------------------------
-  # 3. Webhook Handler 함수 배포
-  # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Webhook-Handler'
-    args:
-      - 'functions'
-      - 'deploy'
-      - 'github-webhook-handler'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=us-central1' # <-- 수정
-      - '--source=./function_4_webhook_handler'
-      - '--entry-point=run'
-      - '--trigger-http'
-      - '--allow-unauthenticated'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta'
+    args: [ 'functions', 'deploy', 'github-webhook-handler', '--gen2', '--runtime=python311', '--region=us-central1', '--source=./function_4_webhook_handler', '--entry-point=run', '--trigger-http', '--allow-unauthenticated', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta' ]
+    waitFor: ['Deploy-Worker-Final']
 
   # -----------------------------------------------------------------
-  # 4. Dispatcher 함수 배포 (Worker 배포 후 실행)
+  # 4. Dispatcher 함수 배포 (Worker 최종 배포 후 실행)
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Dispatcher'
@@ -65,21 +60,15 @@ steps:
     args:
       - '-c'
       - |
-        # Worker 함수의 URL을 가져옵니다.
         WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=us-central1 --gen2 --format='value(serviceConfig.uri)') && \
-        
-        # 가져온 URL을 환경 변수로 사용하여 Dispatcher를 배포합니다.
         gcloud functions deploy github-repo-dispatcher \
           --gen2 --runtime=python311 --region=us-central1 \
           --source=./function_1_dispatcher --entry-point=run \
           --trigger-topic=github-collection-scheduler \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=us-central1,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
-    waitFor: ['Deploy-Worker']
+    waitFor: ['Deploy-Worker-Final']
 
-# 타임아웃 설정
-timeout: 1200s
-
-# 로깅 옵션 설정 권한부여 api활성화
+timeout: 1800s
 options:
   logging: 'CLOUD_LOGGING_ONLY'
