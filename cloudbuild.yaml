@@ -88,8 +88,8 @@ steps:
           --source=./function_1_dispatcher --entry-point=run \
           --trigger-topic=github-collection-scheduler \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
-    waitFor: ['Deploy-Worker-Final']
+          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue-2,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
+    waitFor: [ 'Deploy-Worker-Final' ]
 
 # 타임아웃 및 로깅 옵션
 timeout: 1800s
