@@ -5,11 +5,12 @@ GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 GCP_REGION = os.getenv("GCP_REGION")
 REPO_OWNER = os.getenv("REPO_OWNER")
 SECRET_ID = os.getenv("SECRET_ID") # GitHub 토큰이 저장된 Secret
-WORKER_SERVICE_ACCOUNT = os.getenv("WORKER_SERVICE_ACCOUNT") # 이 함수의 서비스 계정
 
-# ↓↓↓ Detail-Collector 호출을 위한 새로운 환경 변수 ↓↓↓
+# Detail-Collector 호출을 위한 환경 변수
 DETAIL_COLLECTOR_QUEUE_ID = os.getenv("DETAIL_COLLECTOR_QUEUE_ID")
 DETAIL_COLLECTOR_FUNCTION_URL = os.getenv("DETAIL_COLLECTOR_FUNCTION_URL")
+# Dispatcher가 Worker를 호출할 때 사용하는 서비스 계정
+WORKER_SERVICE_ACCOUNT = os.getenv("WORKER_SERVICE_ACCOUNT")
 
 # 필수 변수 검증
 REQUIRED_VARS = [

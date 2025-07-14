@@ -92,15 +92,7 @@ steps:
     args:
       - '-c'
       - |
-        DETAIL_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
-        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)' --quiet || echo "not-found") && \
-        gcloud functions deploy github-pr-collector-worker \
-          --gen2 --runtime=python311 --region=asia-northeast3 \
-          --source=/workspace/deploy_worker --entry-point=run \
-          --trigger-http --no-allow-unauthenticated \
-          --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
-    waitFor: ['Deploy-Detail-Collector', 'Prepare-Worker']
+        DETAIL_COLLECTOR_URL=$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') &&         WORKER_URL=$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)' --quiet || echo "not-found") &&         gcloud functions deploy github-pr-collector-worker           --gen2 --runtime=python311 --region=asia-northeast3           --source=/workspace/deploy_worker --entry-point=run           --trigger-http --no-allow-unauthenticated           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$DETAIL_COLLECTOR_URL,WORKER_FUNCTION_URL=$WORKER_URL"     waitFor: ['Deploy-Detail-Collector', 'Prepare-Worker']
 
   # -----------------------------------------------------------------
   # 3. Dispatcher 함수 배포
