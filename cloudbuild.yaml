@@ -30,19 +30,7 @@ steps:
 
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Transformer'
-    args:
-      - 'functions'
-      - 'deploy'
-      - 'github-data-transformer'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=asia-northeast3'
-      - '--source=./function_3_transformer'
-      - '--entry-point=run'
-      - '--trigger-resource=bcsd-github-analytics-data'
-      - '--trigger-event=google.storage.object.finalize'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics'
+    args: [ 'functions', 'deploy', 'github-data-transformer', '--gen2', '--runtime=python311', '--region=asia-northeast3', '--source=./function_3_transformer', '--entry-point=run', '--trigger-resource=bcsd-github-analytics-data', '--trigger-event=google.storage.object.finalize', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics' ]
 
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Prepare-Webhook-Handler'
