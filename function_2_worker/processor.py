@@ -2,7 +2,7 @@ import json
 import logging
 
 import config
-from github_client import GitHubAPIClient
+from libs.github_client import GitHubAPIClient
 from google.cloud import tasks_v2, secretmanager
 from google.oauth2 import id_token
 from google.auth.transport import requests as auth_requests

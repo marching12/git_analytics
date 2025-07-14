@@ -6,8 +6,8 @@ import requests
 from datetime import datetime
 
 import config
-from data_models import PullRequest, Review, Issue
-from github_client import GitHubAPIClient
+from libs.data_models import PullRequest, Review, Issue
+from libs.github_client import GitHubAPIClient
 from google.cloud import storage, secretmanager, bigquery
 
 # --- 로깅 설정 및 클라이언트 초기화 ---

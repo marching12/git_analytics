@@ -22,6 +22,13 @@ class GitHubAPIClient:
         })
         logging.info("GitHubAPIClient initialized with Session and retry logic.")
 
+    def get_repos(self, owner):
+        """특정 조직의 모든 레포지토리 목록을 가져옵니다."""
+        url = f"{self.BASE_URL}/orgs/{owner}/repos"
+        logging.info(f"Fetching all repositories for organization {owner}")
+        # type=all: private 레포지토리까지 모두 포함
+        return self._make_paginated_request(url, params={'type': 'all', 'per_page': 100})
+
     def _send_request_with_retry(self, url, params=None):
         """지정한 횟수만큼 재시도하며 API 요청을 보냅니다."""
         for attempt in range(self.max_retries):
