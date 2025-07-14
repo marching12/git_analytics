@@ -11,6 +11,7 @@ steps:
       - |
         mkdir -p /workspace/deploy_detail_collector
         cp -r ./function_5_detail_collector/. /workspace/deploy_detail_collector/
+        # [주석] 공용 libs 폴더를 Detail-Collector 배포 패키지에 포함시킵니다.
         cp -r ./libs/. /workspace/deploy_detail_collector/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Detail-Collector'
@@ -55,6 +56,7 @@ steps:
       - |
         mkdir -p /workspace/deploy_webhook_handler
         cp -r ./function_4_webhook_handler/. /workspace/deploy_webhook_handler/
+        # [주석] 공용 libs 폴더를 Webhook-Handler 배포 패키지에 포함시킵니다.
         cp -r ./libs/. /workspace/deploy_webhook_handler/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Webhook-Handler'
@@ -84,6 +86,7 @@ steps:
       - |
         mkdir -p /workspace/deploy_worker
         cp -r ./function_2_worker/. /workspace/deploy_worker/
+        # [주석] 공용 libs 폴더를 Worker 배포 패키지에 포함시킵니다.
         cp -r ./libs/. /workspace/deploy_worker/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Worker'
@@ -111,6 +114,7 @@ steps:
       - |
         mkdir -p /workspace/deploy_dispatcher
         cp -r ./function_1_dispatcher/. /workspace/deploy_dispatcher/
+        # [주석] 공용 libs 폴더를 Dispatcher 배포 패키지에 포함시킵니다.
         cp -r ./libs/. /workspace/deploy_dispatcher/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Dispatcher'
