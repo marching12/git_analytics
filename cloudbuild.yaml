@@ -10,14 +10,14 @@ steps:
       - '-c'
       - |
         mkdir -p /workspace/deploy_detail_collector
-        rsync -r ./function_5_detail_collector/ /workspace/deploy_detail_collector/
-        rsync -r ./libs/ /workspace/deploy_detail_collector/libs/
+        cp -r ./function_5_detail_collector/ /workspace/deploy_detail_collector/
+        cp -r ./libs/ /workspace/deploy_detail_collector/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Detail-Collector'
     args: [ 'functions', 'deploy', 'github-detail-collector', '--gen2', '--runtime=python311', '--region=asia-northeast3', '--source=/workspace/deploy_detail_collector', '--entry-point=run', '--trigger-http', '--no-allow-unauthenticated', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars-from-file=.env' ]
     waitFor: ['Prepare-Detail-Collector']
 
-  # Transformer 배포 (libs 폴더 불필요)
+  # Transformer 배포
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Transformer'
     args: [ 'functions', 'deploy', 'github-data-transformer', '--gen2', '--runtime=python311', '--region=asia-northeast3', '--source=./function_3_transformer', '--entry-point=run', '--trigger-resource=bcsd-github-analytics-data', '--trigger-event=google.storage.object.finalize', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars-from-file=.env' ]
@@ -30,8 +30,8 @@ steps:
       - '-c'
       - |
         mkdir -p /workspace/deploy_webhook_handler
-        rsync -r ./function_4_webhook_handler/ /workspace/deploy_webhook_handler/
-        rsync -r ./libs/ /workspace/deploy_webhook_handler/libs/
+        cp -r ./function_4_webhook_handler/ /workspace/deploy_webhook_handler/
+        cp -r ./libs/ /workspace/deploy_webhook_handler/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Webhook-Handler'
     args: [ 'functions', 'deploy', 'github-webhook-handler', '--gen2', '--runtime=python311', '--region=asia-northeast3', '--source=/workspace/deploy_webhook_handler', '--entry-point=run', '--trigger-http', '--allow-unauthenticated', '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com', '--set-env-vars-from-file=.env' ]
@@ -39,7 +39,6 @@ steps:
 
   # -----------------------------------------------------------------
   # 2. Worker(PR-Lister) 배포
-  # Detail-Collector가 먼저 배포되어야 URL을 가져올 수 있습니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Prepare-Worker'
@@ -48,8 +47,8 @@ steps:
       - '-c'
       - |
         mkdir -p /workspace/deploy_worker
-        rsync -r ./function_2_worker/ /workspace/deploy_worker/
-        rsync -r ./libs/ /workspace/deploy_worker/libs/
+        cp -r ./function_2_worker/ /workspace/deploy_worker/
+        cp -r ./libs/ /workspace/deploy_worker/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Worker'
     entrypoint: 'bash'
@@ -67,7 +66,6 @@ steps:
 
   # -----------------------------------------------------------------
   # 3. Dispatcher 함수 배포
-  # Worker가 배포되어야 URL을 가져올 수 있습니다.
   # -----------------------------------------------------------------
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Prepare-Dispatcher'
@@ -76,8 +74,8 @@ steps:
       - '-c'
       - |
         mkdir -p /workspace/deploy_dispatcher
-        rsync -r ./function_1_dispatcher/ /workspace/deploy_dispatcher/
-        rsync -r ./libs/ /workspace/deploy_dispatcher/libs/
+        cp -r ./function_1_dispatcher/ /workspace/deploy_dispatcher/
+        cp -r ./libs/ /workspace/deploy_dispatcher/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Dispatcher'
     entrypoint: 'bash'
