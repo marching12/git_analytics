@@ -1,11 +1,11 @@
 import json
 import logging
+import os
 
+import config
 import processor
 from google.auth.transport import requests
 from google.oauth2 import id_token
-import os
-import config
 
 # --- 로깅 설정 ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

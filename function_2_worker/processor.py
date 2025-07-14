@@ -2,7 +2,7 @@ import json
 import logging
 
 import config
-from libs.github_client import GitHubAPIClient
+from libs.github_client import GitHubAPIClient  # 공용 클라이언트 사용
 from google.cloud import tasks_v2, secretmanager
 from google.oauth2 import id_token
 from google.auth.transport import requests as auth_requests
@@ -28,11 +28,9 @@ def _get_github_token():
 
 def _create_detail_task(pr_url):
     """PR 하나를 처리하는 세부 작업을 'Detail-Collector' 큐에 등록합니다."""
-
     parent = tasks_client.queue_path(config.GCP_PROJECT_ID, config.GCP_REGION, config.DETAIL_COLLECTOR_QUEUE_ID)
     payload = {"pr_url": pr_url}
 
-    # Detail-Collector 함수를 호출하기 위한 OIDC 토큰 생성
     auth_req = auth_requests.Request()
     oidc_token = id_token.fetch_id_token(auth_req, config.DETAIL_COLLECTOR_FUNCTION_URL)
 
@@ -51,25 +49,37 @@ def _create_detail_task(pr_url):
     logging.info(f"Successfully created detail-task for PR: {pr_url}")
 
 
-# --- 핵심 처리 로직 ---
+# --- ✨ 수정된 핵심 처리 로직 ---
 def list_and_dispatch_prs(repo_name):
-    """레포지토리의 PR 목록을 가져와 세부 작업을 생성(Fan-out)합니다."""
-
+    """레포지토리의 PR 목록을 페이지 단위로 처리하여 메모리 사용량을 최적화합니다."""
     logging.info(f"PR-Lister processor started for {repo_name}")
+
+    total_dispatched_count = 0
     try:
         token = _get_github_token()
         client = GitHubAPIClient(token)
 
-        pr_summaries = client.get_pull_requests(config.REPO_OWNER, repo_name)
-        logging.info(f"Fanning-out {len(pr_summaries)} PRs for {repo_name}.")
+        # GitHubAPIClient의 페이지네이션 로직을 직접 활용
+        url = f"{client.BASE_URL}/repos/{config.REPO_OWNER}/{repo_name}/pulls"
+        params = {'state': 'all', 'per_page': 100}
 
-        for pr_summary in pr_summaries:
-            try:
-                _create_detail_task(pr_summary['url'])
-            except Exception as e:
-                logging.error(f"Failed to create task for PR URL {pr_summary.get('url')}: {e}")
+        while url:
+            response = client._send_request_with_retry(url, params=params)
+            pr_summaries = response.json()
+            logging.info(f"Processing page with {len(pr_summaries)} PRs for {repo_name}.")
 
-        logging.info(f"Successfully dispatched all tasks for {repo_name}.")
+            for pr_summary in pr_summaries:
+                try:
+                    _create_detail_task(pr_summary['url'])
+                    total_dispatched_count += 1
+                except Exception as e:
+                    logging.error(f"Failed to create task for PR URL {pr_summary.get('url')}: {e}")
+
+            # 다음 페이지 URL을 가져옴
+            url = response.links.get('next', {}).get('url')
+            params = {}  # 첫 페이지 이후에는 params가 필요 없음
+
+        logging.info(f"Successfully dispatched a total of {total_dispatched_count} tasks for {repo_name}.")
         return True
 
     except Exception as e:
