@@ -1,24 +1,20 @@
 import os
 
-# from dotenv import load_dotenv # GCP 환경에서는 이 줄을 삭제하거나 주석 처리
-# load_dotenv()
-
+# --- 환경 변수 로드 ---
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+GCP_REGION = os.getenv("GCP_REGION")
 REPO_OWNER = os.getenv("REPO_OWNER")
-GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-SECRET_ID = os.getenv("SECRET_ID")
-BIGQUERY_DATASET_ID = os.getenv("BIGQUERY_DATASET_ID")
-LABEL_MAPPING_TABLE_NAME = os.getenv("LABEL_MAPPING_TABLE_NAME")
-# ↓↓↓ 이 변수는 코드에서 계속 사용하지만, 필수 시작 조건에서는 제외합니다.
-WORKER_FUNCTION_URL = os.getenv("WORKER_FUNCTION_URL")
-COMMON_TEAM_ID = int(os.getenv("COMMON_TEAM_ID", 4))
+SECRET_ID = os.getenv("SECRET_ID") # GitHub 토큰이 저장된 Secret
+WORKER_SERVICE_ACCOUNT = os.getenv("WORKER_SERVICE_ACCOUNT") # 이 함수의 서비스 계정
 
-# ↓↓↓ WORKER_FUNCTION_URL을 이 목록에서 제외해야 시작 오류가 발생하지 않습니다.
+# ↓↓↓ Detail-Collector 호출을 위한 새로운 환경 변수 ↓↓↓
+DETAIL_COLLECTOR_QUEUE_ID = os.getenv("DETAIL_COLLECTOR_QUEUE_ID")
+DETAIL_COLLECTOR_FUNCTION_URL = os.getenv("DETAIL_COLLECTOR_FUNCTION_URL")
+
+# 필수 변수 검증
 REQUIRED_VARS = [
-    GCP_PROJECT_ID, REPO_OWNER, GCS_BUCKET_NAME, SECRET_ID,
-    BIGQUERY_DATASET_ID, LABEL_MAPPING_TABLE_NAME
+    GCP_PROJECT_ID, GCP_REGION, REPO_OWNER, SECRET_ID,
+    WORKER_SERVICE_ACCOUNT, DETAIL_COLLECTOR_QUEUE_ID, DETAIL_COLLECTOR_FUNCTION_URL
 ]
 if not all(REQUIRED_VARS):
-    raise ValueError("필수 환경 변수 중 일부가 없습니다.")
-
-LABEL_MAPPING_TABLE_ID = f"{GCP_PROJECT_ID}.{BIGQUERY_DATASET_ID}.{LABEL_MAPPING_TABLE_NAME}"
+    raise ValueError("PR-Lister(Worker)에 필요한 환경 변수 중 일부가 없습니다.")
