@@ -1,7 +1,8 @@
 import os
 import logging
 from google.cloud import bigquery
-
+import random
+import time
 import config
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -58,6 +59,11 @@ def run(event, context):
             WHEN MATCHED THEN UPDATE SET {set_clause}
             WHEN NOT MATCHED THEN INSERT ROW
         """
+
+        # 0초에서 5초 사이의 랜덤한 시간 동안 대기하여 동시 요청을 분산시킵니다.
+        delay = random.uniform(0, 5)
+        logging.info(f"Waiting for {delay:.2f} seconds before merging to avoid concurrency issues.")
+        time.sleep(delay)
 
         merge_job = bigquery_client.query(merge_sql)
         merge_job.result()
