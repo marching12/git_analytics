@@ -30,7 +30,17 @@ steps:
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4'
     waitFor: ['Prepare-Detail-Collector']
 
-  # [Transformer 배포] - libs 폴더가 필요 없는 유일한 함수
+  # [Transformer 배포]
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'Prepare-Transformer'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        mkdir -p /workspace/deploy_transformer
+        cp -r ./function_3_transformer/. /workspace/deploy_transformer/
+        # [주석] 공용 libs 폴더를 Transformer 배포 패키지에 포함시킵니다.
+        cp -r ./libs/. /workspace/deploy_transformer/libs/
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'Deploy-Transformer'
     args:
@@ -40,12 +50,13 @@ steps:
       - '--gen2'
       - '--runtime=python311'
       - '--region=asia-northeast3'
-      - '--source=./function_3_transformer'
+      - '--source=/workspace/deploy_transformer'
       - '--entry-point=run'
       - '--trigger-resource=bcsd-github-analytics-data'
       - '--trigger-event=google.storage.object.finalize'
       - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics'
+    waitFor: ['Prepare-Transformer']
 
   # [Webhook Handler 배포]
   - name: 'gcr.io/cloud-builders/gcloud'
