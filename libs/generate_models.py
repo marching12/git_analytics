@@ -48,7 +48,7 @@ def generate_pydantic_models():
         final_code += _generate_model_code(client, table_id, class_name)
 
     # data_models.py 파일에 최종 코드 저장
-    with open("../libs/data_models.py", "w", encoding="utf-8") as f:
+    with open("data_models.py", "w", encoding="utf-8") as f:
         f.write(final_code)
 
     print("✅ data_models.py has been generated successfully with all models.")
