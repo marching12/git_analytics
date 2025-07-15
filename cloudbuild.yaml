@@ -26,6 +26,7 @@ steps:
       - '--trigger-http'
       - '--no-allow-unauthenticated'
       - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
+      - '--timeout=540s'
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4'
     waitFor: ['Prepare-Detail-Collector']
 
@@ -53,6 +54,7 @@ steps:
       - '--trigger-resource=bcsd-github-analytics-data'
       - '--trigger-event=google.storage.object.finalize'
       - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
+      - '--timeout=540s'
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics'
     waitFor: ['Prepare-Transformer']
 
@@ -80,6 +82,7 @@ steps:
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
+      - '--timeout=540s'
       - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping'
     waitFor: ['Prepare-Webhook-Handler']
 
@@ -107,6 +110,7 @@ steps:
           --source=/workspace/deploy_worker --entry-point=run \
           --trigger-http --no-allow-unauthenticated \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
+          --timeout=540s \
           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
     waitFor: ['Deploy-Detail-Collector', 'Prepare-Worker']
 
@@ -134,6 +138,7 @@ steps:
           --source=/workspace/deploy_dispatcher --entry-point=run \
           --trigger-topic=github-collection-scheduler \
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
+          --timeout=540s \
           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue-2,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
     waitFor: ['Deploy-Worker', 'Prepare-Dispatcher']
 
