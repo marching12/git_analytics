@@ -205,7 +205,7 @@ steps:
     args:
       - -c
       - |
-        VALIDATOR_URL=$$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-data-validation-job --schedule="0 20 * * *" --uri="$VALIDATOR_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for GCS to BigQuery data validation" || gcloud scheduler jobs update http github-data-validation-job --schedule="0 20 * * *" --uri="$VALIDATOR_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
+        VALIDATOR_URL=$$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-data-validation-job --schedule="0 20 * * *" --uri="$$VALIDATOR_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for GCS to BigQuery data validation" || gcloud scheduler jobs update http github-data-validation-job --schedule="0 20 * * *" --uri="$$VALIDATOR_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
     waitFor: [Deploy-Data-Validator]
 
 # 타임아웃 및 로깅 옵션
