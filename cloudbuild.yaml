@@ -87,7 +87,7 @@ steps:
     waitFor: [Prepare-Webhook-Handler]
 
 # =================================================================
-# [메타 Merger 함수 및 스케줄러 배포]
+# [메타 Merger 함수 배포]
 # =================================================================
   - name: gcr.io/cloud-builders/gcloud
     id: Prepare-Merger
@@ -116,15 +116,6 @@ steps:
       - --timeout=540s
       - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics
     waitFor: [Prepare-Merger]
-
-  - name: gcr.io/cloud-builders/gcloud
-    id: Deploy-Scheduler-for-Meta-Merger
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        MERGER_URL=$$(gcloud functions describe github-data-meta-merger --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-meta-merge-job --schedule="0 * * * *" --uri="$$MERGER_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for BigQuery Meta MERGE function" || gcloud scheduler jobs update http github-meta-merge-job --schedule="0 * * * *" --uri="$$MERGER_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
-    waitFor: [Deploy-Meta-Merger]
 
   # -----------------------------------------------------------------
   # 2. Worker(PR-Lister) 배포
@@ -169,7 +160,7 @@ steps:
     waitFor: [Deploy-Worker, Prepare-Dispatcher]
 
 # =================================================================
-# [데이터 검증기(Validator) 함수 및 스케줄러 배포]
+# [데이터 검증기(Validator) 함수 배포]
 # =================================================================
   - name: gcr.io/cloud-builders/gcloud
     id: Prepare-Validator
@@ -198,15 +189,6 @@ steps:
       - --timeout=540s
       - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics,GCS_BUCKET_NAME=bcsd-github-analytics-data
     waitFor: [Prepare-Validator]
-
-  - name: gcr.io/cloud-builders/gcloud
-    id: Deploy-Scheduler-for-Validator
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        VALIDATOR_URL=$$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-data-validation-job --schedule="0 20 * * *" --uri="$$VALIDATOR_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for GCS to BigQuery data validation" || gcloud scheduler jobs update http github-data-validation-job --schedule="0 20 * * *" --uri="$$VALIDATOR_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
-    waitFor: [Deploy-Data-Validator]
 
 # 타임아웃 및 로깅 옵션
 timeout: 1800s
