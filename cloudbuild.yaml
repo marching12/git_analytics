@@ -87,7 +87,7 @@ steps:
     waitFor: [Prepare-Webhook-Handler]
 
 # =================================================================
-# [⭐️ 수정된 부분: 메타 Merger 함수 및 스케줄러 배포]
+# [메타 Merger 함수 및 스케줄러 배포]
 # =================================================================
   - name: gcr.io/cloud-builders/gcloud
     id: Prepare-Merger
@@ -123,19 +123,7 @@ steps:
     args:
       - -c
       - |
-        MERGER_URL=$$(gcloud functions describe github-data-meta-merger --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
-        gcloud scheduler jobs create http github-meta-merge-job \
-          --schedule="0 * * * *" \
-          --uri="$$MERGER_URL" \
-          --http-method=POST \
-          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" \
-          --location=asia-northeast3 \
-          --description="Trigger for BigQuery Meta MERGE function" \
-          || \
-        gcloud scheduler jobs update http github-meta-merge-job \
-          --schedule="0 * * * *" \
-          --uri="$$MERGER_URL" \
-          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
+        MERGER_URL=$$(gcloud functions describe github-data-meta-merger --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-meta-merge-job --schedule="0 * * * *" --uri="$$MERGER_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for BigQuery Meta MERGE function" || gcloud scheduler jobs update http github-meta-merge-job --schedule="0 * * * *" --uri="$$MERGER_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
     waitFor: [Deploy-Meta-Merger]
 
   # -----------------------------------------------------------------
@@ -156,14 +144,7 @@ steps:
     args:
       - -c
       - |
-        DETAIL_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
-        gcloud functions deploy github-pr-collector-worker \
-          --gen2 --runtime=python311 --region=asia-northeast3 \
-          --source=/workspace/deploy_worker --entry-point=run \
-          --trigger-http --no-allow-unauthenticated \
-          --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --timeout=540s \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
+        DETAIL_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud functions deploy github-pr-collector-worker --gen2 --runtime=python311 --region=asia-northeast3 --source=/workspace/deploy_worker --entry-point=run --trigger-http --no-allow-unauthenticated --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com --timeout=540s --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
     waitFor: [Deploy-Detail-Collector, Prepare-Worker]
 
   # -----------------------------------------------------------------
@@ -184,18 +165,11 @@ steps:
     args:
       - -c
       - |
-        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
-        gcloud functions deploy github-repo-dispatcher \
-          --gen2 --runtime=python311 --region=asia-northeast3 \
-          --source=/workspace/deploy_dispatcher --entry-point=run \
-          --trigger-topic=github-collection-scheduler \
-          --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
-          --timeout=540s \
-          --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue-2,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
+        WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud functions deploy github-repo-dispatcher --gen2 --runtime=python311 --region=asia-northeast3 --source=/workspace/deploy_dispatcher --entry-point=run --trigger-topic=github-collection-scheduler --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com --timeout=540s --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue-2,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
     waitFor: [Deploy-Worker, Prepare-Dispatcher]
 
 # =================================================================
-# [⭐️ 추가된 부분: 데이터 검증기(Validator) 함수 및 스케줄러 배포]
+# [데이터 검증기(Validator) 함수 및 스케줄러 배포]
 # =================================================================
   - name: gcr.io/cloud-builders/gcloud
     id: Prepare-Validator
@@ -231,20 +205,7 @@ steps:
     args:
       - -c
       - |
-        VALIDATOR_URL=$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
-        gcloud scheduler jobs create http github-data-validation-job \
-          --schedule="0 20 * * *" \
-          --uri="$VALIDATOR_URL" \
-          --http-method=POST \
-          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" \
-          --location=asia-northeast3 \
-          --description="Trigger for GCS to BigQuery data validation" \
-          || \
-        gcloud scheduler jobs update http github-data-validation-job \
-          --schedule="0 20 * * *" \
-          --uri="$VALIDATOR_URL" \
-          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
-
+        VALIDATOR_URL=$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud scheduler jobs create http github-data-validation-job --schedule="0 20 * * *" --uri="$VALIDATOR_URL" --http-method=POST --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" --location=asia-northeast3 --description="Trigger for GCS to BigQuery data validation" || gcloud scheduler jobs update http github-data-validation-job --schedule="0 20 * * *" --uri="$VALIDATOR_URL" --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
     waitFor: [Deploy-Data-Validator]
 
 # 타임아웃 및 로깅 옵션
