@@ -1,0 +1,5 @@
+# function_6_merger/requirements.txt
+
+functions-framework>=3.0.0
+google-cloud-bigquery
+pydantic

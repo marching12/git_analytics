@@ -3,106 +3,158 @@ steps:
   # 1. 의존성이 없는 함수들을 먼저 배포합니다.
   # -----------------------------------------------------------------
   # [Detail-Collector 배포]
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Prepare-Detail-Collector'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Detail-Collector
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         mkdir -p /workspace/deploy_detail_collector
         cp -r ./function_5_detail_collector/. /workspace/deploy_detail_collector/
         cp -r ./libs/. /workspace/deploy_detail_collector/libs/
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Detail-Collector'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Detail-Collector
     args:
-      - 'functions'
-      - 'deploy'
-      - 'github-detail-collector'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=asia-northeast3'
-      - '--source=/workspace/deploy_detail_collector'
-      - '--entry-point=run'
-      - '--trigger-http'
-      - '--no-allow-unauthenticated'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--timeout=540s'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4'
-    waitFor: ['Prepare-Detail-Collector']
+      - functions
+      - deploy
+      - github-detail-collector
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_detail_collector
+      - --entry-point=run
+      - --trigger-http
+      - --no-allow-unauthenticated
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4
+    waitFor: [Prepare-Detail-Collector]
 
   # [Transformer 배포]
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Prepare-Transformer'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Transformer
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         mkdir -p /workspace/deploy_transformer
         cp -r ./function_3_transformer/. /workspace/deploy_transformer/
         cp -r ./libs/. /workspace/deploy_transformer/libs/
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Transformer'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Transformer
     args:
-      - 'functions'
-      - 'deploy'
-      - 'github-data-transformer'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=asia-northeast3'
-      - '--source=/workspace/deploy_transformer'
-      - '--entry-point=run'
-      - '--trigger-resource=bcsd-github-analytics-data'
-      - '--trigger-event=google.storage.object.finalize'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--timeout=540s'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics'
-    waitFor: ['Prepare-Transformer']
+      - functions
+      - deploy
+      - github-data-transformer
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_transformer
+      - --entry-point=run
+      - --trigger-resource=bcsd-github-analytics-data
+      - --trigger-event=google.storage.object.finalize
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics
+    waitFor: [Prepare-Transformer]
 
   # [Webhook Handler 배포]
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Prepare-Webhook-Handler'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Webhook-Handler
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         mkdir -p /workspace/deploy_webhook_handler
         cp -r ./function_4_webhook_handler/. /workspace/deploy_webhook_handler/
         cp -r ./libs/. /workspace/deploy_webhook_handler/libs/
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Webhook-Handler'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Webhook-Handler
     args:
-      - 'functions'
-      - 'deploy'
-      - 'github-webhook-handler'
-      - '--gen2'
-      - '--runtime=python311'
-      - '--region=asia-northeast3'
-      - '--source=/workspace/deploy_webhook_handler'
-      - '--entry-point=run'
-      - '--trigger-http'
-      - '--allow-unauthenticated'
-      - '--service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com'
-      - '--timeout=540s'
-      - '--set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping'
-    waitFor: ['Prepare-Webhook-Handler']
+      - functions
+      - deploy
+      - github-webhook-handler
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_webhook_handler
+      - --entry-point=run
+      - --trigger-http
+      - --allow-unauthenticated
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,GCS_BUCKET_NAME=bcsd-github-analytics-data,WEBHOOK_SECRET_ID=github-webhook-secret,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping
+    waitFor: [Prepare-Webhook-Handler]
+
+# =================================================================
+# [⭐️ 수정된 부분: 메타 Merger 함수 및 스케줄러 배포]
+# =================================================================
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Merger
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        mkdir -p /workspace/deploy_merger
+        cp -r ./function_6_merger/. /workspace/deploy_merger/
+        cp -r ./libs/. /workspace/deploy_merger/libs/
+
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Meta-Merger
+    args:
+      - functions
+      - deploy
+      - github-data-meta-merger
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_merger
+      - --entry-point=merge_data
+      - --trigger-http
+      - --no-allow-unauthenticated
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics
+    waitFor: [Prepare-Merger]
+
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Scheduler-for-Meta-Merger
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        MERGER_URL=$$(gcloud functions describe github-data-meta-merger --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
+        gcloud scheduler jobs create http github-meta-merge-job \
+          --schedule="0 * * * *" \
+          --uri="$$MERGER_URL" \
+          --http-method=POST \
+          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" \
+          --location=asia-northeast3 \
+          --description="Trigger for BigQuery Meta MERGE function" \
+          || \
+        gcloud scheduler jobs update http github-meta-merge-job \
+          --schedule="0 * * * *" \
+          --uri="$$MERGER_URL" \
+          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
+    waitFor: [Deploy-Meta-Merger]
 
   # -----------------------------------------------------------------
   # 2. Worker(PR-Lister) 배포
   # -----------------------------------------------------------------
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Prepare-Worker'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Worker
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         mkdir -p /workspace/deploy_worker
         cp -r ./function_2_worker/. /workspace/deploy_worker/
         cp -r ./libs/. /workspace/deploy_worker/libs/
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Worker'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Worker
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         DETAIL_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
         gcloud functions deploy github-pr-collector-worker \
@@ -112,25 +164,25 @@ steps:
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
           --timeout=540s \
           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
-    waitFor: ['Deploy-Detail-Collector', 'Prepare-Worker']
+    waitFor: [Deploy-Detail-Collector, Prepare-Worker]
 
   # -----------------------------------------------------------------
   # 3. Dispatcher 함수 배포
   # -----------------------------------------------------------------
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Prepare-Dispatcher'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Dispatcher
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         mkdir -p /workspace/deploy_dispatcher
         cp -r ./function_1_dispatcher/. /workspace/deploy_dispatcher/
         cp -r ./libs/. /workspace/deploy_dispatcher/libs/
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'Deploy-Dispatcher'
-    entrypoint: 'bash'
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Dispatcher
+    entrypoint: bash
     args:
-      - '-c'
+      - -c
       - |
         WORKER_URL=$$(gcloud functions describe github-pr-collector-worker --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
         gcloud functions deploy github-repo-dispatcher \
@@ -140,9 +192,62 @@ steps:
           --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com \
           --timeout=540s \
           --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,TASK_QUEUE_ID=github-collector-queue-2,WORKER_FUNCTION_URL=$$WORKER_URL,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,BIGQUERY_DATASET_ID=github_analytics,TARGET_REPO_TABLE=repositories"
-    waitFor: ['Deploy-Worker', 'Prepare-Dispatcher']
+    waitFor: [Deploy-Worker, Prepare-Dispatcher]
+
+# =================================================================
+# [⭐️ 추가된 부분: 데이터 검증기(Validator) 함수 및 스케줄러 배포]
+# =================================================================
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Validator
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        mkdir -p /workspace/deploy_validator
+        cp -r ./function_7_validator/. /workspace/deploy_validator/
+        cp -r ./libs/. /workspace/deploy_validator/libs/
+
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Data-Validator
+    args:
+      - functions
+      - deploy
+      - github-data-validator
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_validator
+      - --entry-point=validate_data_consistency
+      - --trigger-http
+      - --no-allow-unauthenticated
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics,GCS_BUCKET_NAME=bcsd-github-analytics-data
+    waitFor: [Prepare-Validator]
+
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Scheduler-for-Validator
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        VALIDATOR_URL=$(gcloud functions describe github-data-validator --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && \
+        gcloud scheduler jobs create http github-data-validation-job \
+          --schedule="0 20 * * *" \
+          --uri="$VALIDATOR_URL" \
+          --http-method=POST \
+          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com" \
+          --location=asia-northeast3 \
+          --description="Trigger for GCS to BigQuery data validation" \
+          || \
+        gcloud scheduler jobs update http github-data-validation-job \
+          --schedule="0 20 * * *" \
+          --uri="$VALIDATOR_URL" \
+          --oidc-service-account-email="bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com"
+
+    waitFor: [Deploy-Data-Validator]
 
 # 타임아웃 및 로깅 옵션
 timeout: 1800s
 options:
-  logging: 'CLOUD_LOGGING_ONLY'
+  logging: CLOUD_LOGGING_ONLY
