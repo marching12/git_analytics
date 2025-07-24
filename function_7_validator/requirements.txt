@@ -1,5 +1,5 @@
 # function_X/requirements.txt
-
+google-cloud-storage
 functions-framework>=3.0.0
 google-cloud-bigquery
 pydantic
