@@ -1,62 +1,69 @@
-import logging
+import os
+import functions_framework
 from google.cloud import bigquery
-import config
-
-# 로깅 설정
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from libs.data_models import get_model_info, pydantic_to_bigquery_schema
 
 # BigQuery 클라이언트 초기화
-bigquery_client = bigquery.Client()
+client = bigquery.Client()
 
 
-def run(event, context):
-    """
-    GCS에 파일이 생성되면, 해당 데이터를 BigQuery의 스테이징 테이블에 INSERT(Append)합니다.
-    """
-    # GCS 이벤트에서 버킷과 파일 이름 가져오기
-    bucket_name = event['bucket']
-    file_name = event['name']
-    logging.info(f"Triggered by file: gs://{bucket_name}/{file_name}")
+@functions_framework.cloud_event
+def run(cloud_event):
+    data = cloud_event.data
+    bucket_name = data["bucket"]
+    file_name = data["name"]
 
+    # 환경 변수에서 설정 값 가져오기
+    project_id = os.environ.get("GCP_PROJECT_ID")
+    dataset_id = os.environ.get("BIGQUERY_DATASET_ID")
+
+    if not all([project_id, dataset_id]):
+        print("오류: GCP_PROJECT_ID, BIGQUERY_DATASET_ID 환경 변수가 모두 필요합니다.")
+        return
+
+    print(f"GCS 버킷 '{bucket_name}'에서 '{file_name}' 파일 감지됨.")
+
+    # 파일 이름에서 테이블 타입을 추출 (예: 'pull_requests_1234.json' -> 'pull_requests')
     try:
-        # 파일 경로를 분석하여 대상 테이블 이름을 결정합니다.
-        # 예: 'pull_requests/...' -> 'pull_requests_staging'
-        table_name_base = file_name.split('/')[0].replace('_webhook', '')
-        allowed_tables = {'pull_requests', 'issues', 'reviews'}
-        if table_name_base not in allowed_tables:
-            logging.warning(f"'{table_name_base}'는 처리 대상 테이블이 아니므로 건너뜁니다.")
-            return 'OK'
+        table_type = file_name.split('_')[0]
     except IndexError:
-        logging.warning(f"파일 경로 '{file_name}'의 형식이 올바르지 않아 건너뜁니다.")
-        return 'OK'
+        print(f"오류: 파일 이름 '{file_name}'에서 테이블 타입을 추출할 수 없습니다.")
+        return
 
-    # 최종 목적지인 '스테이징 테이블'의 전체 ID를 구성합니다.
-    staging_table_id = f"{config.GCP_PROJECT_ID}.{config.BIGQUERY_DATASET_ID}.{table_name_base}_staging"
+    # data_models.py를 이용해 테이블에 맞는 모델과 고유 키를 가져옴
+    model_class, _ = get_model_info(table_type)
+    if not model_class:
+        print(f"오류: '{table_type}'에 해당하는 모델 정보를 data_models.py에서 찾을 수 없습니다.")
+        return
 
-    # GCS 파일의 전체 URI
-    uri = f"gs://{bucket_name}/{file_name}"
+    # Pydantic 모델을 BigQuery 스키마로 변환
+    schema = pydantic_to_bigquery_schema(model_class)
+
+    # 대상 스테이징 테이블 ID 정의
+    staging_table_id = f"{project_id}.{dataset_id}.staging_{table_type}"
+
+    # BigQuery 로드 작업 구성
+    job_config = bigquery.LoadJobConfig(
+        schema=schema,  # ⭐️ 스키마를 직접 지정
+        source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,  # 데이터를 계속 추가
+    )
+
+    gcs_uri = f"gs://{bucket_name}/{file_name}"
 
     try:
-        # BigQuery Load Job 설정을 정의합니다.
-        job_config = bigquery.LoadJobConfig(
-            # 소스 파일은 JSONL (줄바꿈으로 구분된 JSON) 형식임을 지정합니다.
-            source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-            # 데이터를 덮어쓰지 않고, 기존 데이터에 추가(Append)합니다.
-            write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+        print(f"'{gcs_uri}'의 데이터를 '{staging_table_id}' 테이블로 로드합니다...")
+        load_job = client.load_table_from_uri(
+            gcs_uri,
+            staging_table_id,
+            job_config=job_config
         )
+        load_job.result()  # 작업이 완료될 때까지 대기
 
-        # GCS URI로부터 스테이징 테이블로 데이터를 로드하는 작업을 시작합니다.
-        load_job = bigquery_client.load_table_from_uri(uri, staging_table_id, job_config=job_config)
-
-        logging.info(f"Staging table '{staging_table_id}'로 데이터 로드 작업을 시작합니다. (Job ID: {load_job.job_id})")
-
-        # 작업이 완료될 때까지 기다립니다.
-        load_job.result()
-
-        logging.info(f"성공! {load_job.output_rows}개의 행을 '{staging_table_id}'에 추가했습니다.")
+        destination_table = client.get_table(staging_table_id)
+        print(f"로드 작업 성공. 총 {destination_table.num_rows}개의 행이 '{staging_table_id}'에 로드되었습니다.")
 
     except Exception as e:
-        logging.error(f"'{staging_table_id}'로 데이터 로드 중 에러 발생: {e}")
-        raise  # 에러를 다시 발생시켜 Cloud Functions에서 실패로 기록되게 함
-
-    return 'OK'
+        print(f"'{staging_table_id}'로 데이터 로드 중 에러 발생: {e}")
+        # 오류를 다시 발생시켜 Cloud Functions가 재시도하도록 할 수 있습니다.
+        raise e
