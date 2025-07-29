@@ -23,9 +23,11 @@ def run(cloud_event):
 
     print(f"GCS 버킷 '{bucket_name}'에서 '{file_name}' 파일 감지됨.")
 
-    # 파일 이름에서 테이블 타입을 추출 (예: 'pull_requests_1234.json' -> 'pull_requests')
+    # --- ⭐️ 수정된 부분 ---
+    # 파일 이름에서 테이블 타입을 추출하는 로직 변경
     try:
-        table_type = file_name.split('_')[0]
+        # 파일 경로에서 폴더 이름을 테이블 타입으로 사용 (예: 'pull_requests/pr_123.jsonl' -> 'pull_requests')
+        table_type = file_name.split('/')[0]
     except IndexError:
         print(f"오류: 파일 이름 '{file_name}'에서 테이블 타입을 추출할 수 없습니다.")
         return
@@ -44,9 +46,9 @@ def run(cloud_event):
 
     # BigQuery 로드 작업 구성
     job_config = bigquery.LoadJobConfig(
-        schema=schema,  # ⭐️ 스키마를 직접 지정
+        schema=schema,
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,  # 데이터를 계속 추가
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
     )
 
     gcs_uri = f"gs://{bucket_name}/{file_name}"
@@ -65,5 +67,4 @@ def run(cloud_event):
 
     except Exception as e:
         print(f"'{staging_table_id}'로 데이터 로드 중 에러 발생: {e}")
-        # 오류를 다시 발생시켜 Cloud Functions가 재시도하도록 할 수 있습니다.
         raise e
