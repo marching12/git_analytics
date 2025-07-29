@@ -57,6 +57,11 @@ class GitHubAPIClient:
             params = {}
         return results
 
+    def get(self, url, params=None):
+        """주어진 전체 URL에 대해 GET 요청을 보내고 응답 객체를 반환합니다."""
+        logging.info(f"Making a generic GET request to: {url}")
+        return self._send_request_with_retry(url, params=params)
+
     def get_pull_requests(self, owner, repo):
         url = f"{self.BASE_URL}/repos/{owner}/{repo}/pulls"
         logging.info(f"Fetching pull requests for {owner}/{repo}")
