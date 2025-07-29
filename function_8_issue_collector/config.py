@@ -1,0 +1,18 @@
+# function_8_issue_collector/config.py
+import os
+
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+SECRET_ID = os.getenv("SECRET_ID") # GitHub 토큰
+BIGQUERY_DATASET_ID = os.getenv("BIGQUERY_DATASET_ID")
+LABEL_MAPPING_TABLE_NAME = os.getenv("LABEL_MAPPING_TABLE_NAME")
+COMMON_TEAM_ID = int(os.getenv("COMMON_TEAM_ID", 4))
+
+REQUIRED_VARS = [
+    GCP_PROJECT_ID, GCS_BUCKET_NAME, SECRET_ID,
+    BIGQUERY_DATASET_ID, LABEL_MAPPING_TABLE_NAME
+]
+if not all(REQUIRED_VARS):
+    raise ValueError("Issue-Collector에 필요한 환경 변수 중 일부가 없습니다.")
+
+LABEL_MAPPING_TABLE_ID = f"{GCP_PROJECT_ID}.{BIGQUERY_DATASET_ID}.{LABEL_MAPPING_TABLE_NAME}"

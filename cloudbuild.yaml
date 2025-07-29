@@ -30,6 +30,33 @@ steps:
       - --set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4
     waitFor: [Prepare-Detail-Collector]
 
+# [Issue-Collector 배포]
+  - name: gcr.io/cloud-builders/gcloud
+    id: Prepare-Issue-Collector
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        mkdir -p /workspace/deploy_issue_collector
+        cp -r ./function_8_issue_collector/. /workspace/deploy_issue_collector/
+        cp -r ./libs/. /workspace/deploy_issue_collector/libs/
+  - name: gcr.io/cloud-builders/gcloud
+    id: Deploy-Issue-Collector
+    args:
+      - functions
+      - deploy
+      - github-issue-collector
+      - --gen2
+      - --runtime=python311
+      - --region=asia-northeast3
+      - --source=/workspace/deploy_issue_collector
+      - --entry-point=run
+      - --trigger-http
+      - --no-allow-unauthenticated
+      - --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com
+      - --timeout=540s
+      - --set-env-vars=GCP_PROJECT_ID=bcsd-github,REPO_OWNER=BCSDLab,GCS_BUCKET_NAME=bcsd-github-analytics-data,SECRET_ID=bcsd-github-analytics-pta,BIGQUERY_DATASET_ID=github_analytics,LABEL_MAPPING_TABLE_NAME=label_team_mapping,COMMON_TEAM_ID=4
+    waitFor: [Prepare-Issue-Collector]
   # [Transformer 배포]
   - name: gcr.io/cloud-builders/gcloud
     id: Prepare-Transformer
@@ -135,8 +162,8 @@ steps:
     args:
       - -c
       - |
-        DETAIL_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud functions deploy github-pr-collector-worker --gen2 --runtime=python311 --region=asia-northeast3 --source=/workspace/deploy_worker --entry-point=run --trigger-http --no-allow-unauthenticated --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com --timeout=540s --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$DETAIL_COLLECTOR_URL"
-    waitFor: [Deploy-Detail-Collector, Prepare-Worker]
+        PR_COLLECTOR_URL=$$(gcloud functions describe github-detail-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && ISSUE_COLLECTOR_URL=$$(gcloud functions describe github-issue-collector --region=asia-northeast3 --gen2 --format='value(serviceConfig.uri)') && gcloud functions deploy github-pr-collector-worker --gen2 --runtime=python311 --region=asia-northeast3 --source=/workspace/deploy_worker --entry-point=run --trigger-http --no-allow-unauthenticated --service-account=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com --timeout=540s --set-env-vars="GCP_PROJECT_ID=bcsd-github,GCP_REGION=asia-northeast3,REPO_OWNER=BCSDLab,SECRET_ID=bcsd-github-analytics-pta,DETAIL_COLLECTOR_QUEUE_ID=github-detail-collector-queue,WORKER_SERVICE_ACCOUNT=bcsd-github-analytics-debug@bcsd-github.iam.gserviceaccount.com,DETAIL_COLLECTOR_FUNCTION_URL=$$PR_COLLECTOR_URL,ISSUE_COLLECTOR_QUEUE_ID=github-issue-collector-queue,ISSUE_COLLECTOR_FUNCTION_URL=$$ISSUE_COLLECTOR_URL"
+    waitFor: [Deploy-Detail-Collector, Deploy-Issue-Collector, Prepare-Worker]
 
   # -----------------------------------------------------------------
   # 3. Dispatcher 함수 배포

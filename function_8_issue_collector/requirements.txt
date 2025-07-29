@@ -1,0 +1,8 @@
+# function_8_issue_collector/requirements.txt
+functions-framework==3.*
+requests
+google-cloud-storage
+google-cloud-secret-manager
+google-cloud-bigquery
+pydantic==2.*
+google-auth
