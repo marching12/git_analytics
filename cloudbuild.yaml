@@ -240,7 +240,7 @@ steps:
       - --set-env-vars=GCP_PROJECT_ID=bcsd-github,BIGQUERY_DATASET_ID=github_analytics,GCS_BUCKET_NAME=bcsd-github-analytics-data
     waitFor: [Prepare-Validator]
 
-# 타임아웃 및 로깅 옵션
+# 타임아웃 및 로깅옵션
 timeout: 1800s
 options:
   logging: CLOUD_LOGGING_ONLY
