@@ -1,0 +1,4 @@
+functions-framework==3.*
+google-cloud-pubsub
+google-cloud-bigquery
+pydantic==2.*
